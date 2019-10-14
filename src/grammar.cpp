@@ -197,4 +197,37 @@ namespace CFGR
 			}
 		}
 	}
+
+	const std::vector<char> Grammar::GetVariables() const
+	{
+		return variables;
+	}
+
+	const std::vector<char> Grammar::GetTerminals() const
+	{
+		return terminals;
+	}
+
+	const std::vector<Rule> Grammar::GetRules() const
+	{
+		return rules;
+	}
+
+	bool operator==(const Rule r1, const Rule r2)
+	{
+		bool result = true;
+		if (r1.start != r2.start) result = false;
+		else
+		{
+			for (int i = 0; i < r1.end.size(); ++i)
+			{
+				if (r1.end[i] != r2.end[i])
+				{
+					result = false;
+					break;
+				}
+			}
+		}
+		return result;
+	}
 }

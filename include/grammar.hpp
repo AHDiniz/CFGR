@@ -10,6 +10,8 @@ namespace CFGR
 		std::vector<char> end;
 	};
 
+	bool operator==(const Rule r1, const Rule r2);
+
 	class Grammar
 	{
 	public:
@@ -17,10 +19,14 @@ namespace CFGR
 		void AddRule(const Rule rule);
 		void Refine(void);
 
+		const std::vector<char> GetVariables() const;
+		const std::vector<char> GetTerminals() const;
+		const std::vector<Rule> GetRules() const;
+
 	private:
 		char sentenceElem;
 		std::vector<char> variables;
 		std::vector<char> terminals;
-		std::vector<const Rule> rules;
+		std::vector<Rule> rules;
 	};
 }

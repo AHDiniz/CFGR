@@ -1,0 +1,19 @@
+12 5 17 S
+S A B C D E F G H I J K
+a b c d e
+S -> aSb
+S -> ABC
+S -> cA
+A -> cA
+A -> 0
+S -> 0
+B -> D
+D -> E
+E -> F
+F -> dG
+D -> dG
+G -> dG
+H -> I
+J -> e
+K -> e
+K -> aA
