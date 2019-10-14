@@ -51,6 +51,7 @@ namespace CFGR
 			}
 		}
 
+		char prevSElem;
 		/* Removing the sentence element recursion if it's nullable */
 		if (CONTAINS(nullable, sentenceElem))
 		{
@@ -63,6 +64,7 @@ namespace CFGR
 			rules.push_back(nRule1);
 			rules.push_back(nRule2);
 
+			prevSElem = sentenceElem;
 			sentenceElem = nSentenceElem;
 			variables.push_back(nSentenceElem);
 		}
@@ -107,6 +109,7 @@ namespace CFGR
 			std::vector<Rule> chainRules;
 			for (Rule rule : rules)
 			{
+				if (rule.start == sentenceElem && rule.end[0] == prevSElem) continue;
 				if (rule.end.size() == 1 && CONTAINS(variables, rule.end[0]))
 				{
 					chainRules.push_back(rule);
@@ -150,12 +153,18 @@ namespace CFGR
 						for (char v : rule.end)
 						{
 							if (v >= 'a' && v <= 'z')
-								generators.push_back(v);
+								generators.push_back(rule.start);
 						}
 					}
 				}
 
 				previous = generators;
+			}
+
+			for (char variable : variables)
+			{
+				if (!CONTAINS(generators, variable))
+					REMOVE(variables, variable);
 			}
 
 			for (Rule rule : rules)
@@ -181,13 +190,25 @@ namespace CFGR
 					{
 						for (char v : rule.end)
 						{
-							if (v >= 'A' && v <= 'Z')
+							if ((v >= 'A' && v <= 'Z') || (v >= 'a' && v <= 'z'))
 								reachable.push_back(v);
 						}
 					}
 				}
 
 				previous = reachable;
+			}
+
+			for (char variable : variables)
+			{
+				if (!CONTAINS(reachable, variable))
+					REMOVE(variables, variable);
+			}
+
+			for (char terminal : terminals)
+			{
+				if (!CONTAINS(reachable, terminal))
+					REMOVE(terminals, terminal);
 			}
 
 			for (Rule rule : rules)

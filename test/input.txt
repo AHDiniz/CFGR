@@ -1,4 +1,4 @@
-12 5 17 S
+17 S
 S A B C D E F G H I J K
 a b c d e
 S -> aSb

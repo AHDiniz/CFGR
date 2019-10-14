@@ -3,76 +3,16 @@
 #include "util/IOhandles.hpp"
 #include "util/log.hpp"
 
+
 namespace CFGR
 {
+	Grammar actualRead(FILE *f);
+
 	Grammar Read()
 	{
 		LOG_INFO("%s\n", "Reading the grammar from standard input.");
 
-		char sentenceElem;
-		int vCount, tCount, rCount;
-		std::vector<char> variables;
-		std::vector<char> terminals;
-
-		std::cin >> vCount >> tCount >> rCount >> sentenceElem;
-
-		for (int i = 0; i < vCount; ++i)
-		{
-			char variable;
-			variable = getc(stdin);
-			if (variable >= 'A' && variable <= 'Z')
-				variables.push_back(variable);
-		}
-
-		for (int i = 0; i < tCount; ++i)
-		{
-			char terminal;
-			terminal = getc(stdin);
-			if (terminal >= 'A' && terminal <= 'Z')
-				terminals.push_back(terminal);
-		}
-
-		Grammar g(sentenceElem, variables, terminals);
-
-		for (int i = 0; i < rCount; ++i)
-		{
-			char start;
-			char end[32];
-			int endSize = 0;
-			scanf("%c -> ", &start);
-
-			char c;
-			do
-			{
-				c = getc(stdin);
-				if (c != '\n') end[endSize++] = c;
-			} while (c != '\n');
-
-			if (start < 'A' || start > 'Z')
-			{
-				LOG_ERROR("Rule #%d is invalid because it uses the invalid variable character %c in the rule start. This rule is being ignored.\n", i + 1, start);
-				continue;
-			}
-
-			for (int j = 0; j < endSize; ++j)
-			{
-				if ((end[j] != '0') && ((end[j] < 'A') || (end[j] > 'Z' && end[j] < 'a') || (end[j] > 'z')))
-				{
-					LOG_ERROR("Rule #%d is invalid because it uses the invalid variable character %c in the rule end. This rule is being ignored.\n", i + 1, end[j]);
-					continue;
-				}
-			}
-
-			Rule rule;
-
-			rule.start = start;
-			for (int i = 0; i < endSize; ++i)
-				rule.end.push_back(end[i]);
-			
-			g.AddRule(rule);
-		}
-
-		return g;
+		return actualRead(stdin);
 	}
 
 	Grammar Read(const char *path)
@@ -87,64 +27,63 @@ namespace CFGR
 
 		LOG_INFO("Reading the grammar from the file %s.\n", path);
 
+		return actualRead(f);
+	}
+
+	Grammar actualRead(FILE *f)
+	{
 		char sentenceElem;
-		int vCount, tCount, rCount;
+		int ruleCount;
 		std::vector<char> variables;
 		std::vector<char> terminals;
 
-		std::cin >> vCount >> tCount >> rCount >> sentenceElem;
+		fscanf(f, "%d %c\n", &ruleCount, &sentenceElem);
 
-		for (int i = 0; i < vCount; ++i)
+		char variable;
+		do
 		{
-			char variable;
-			fscanf(f, "%c\n", &variable);
-			variables.push_back(variable);
-		}
+			variable = fgetc(f);
+			if (variable >= 'A' && variable <= 'Z')
+			{
+				variables.push_back(variable);
+			}
+		} while (variable != '\n');
 
-		for (int i = 0; i < tCount; ++i)
+		char terminal;
+		do
 		{
-			char terminal;
-			fscanf(f, "%c\n", &terminal);
-			terminals.push_back(terminal);
-		}
+			terminal = fgetc(f);
+			if (terminal >= 'a' && terminal <= 'z')
+			{
+				terminals.push_back(terminal);
+			}
+		} while (terminal != '\n');
 
 		Grammar g(sentenceElem, variables, terminals);
 
-		for (int i = 0; i < rCount; ++i)
+		for (int i = 0; i < ruleCount; ++i)
 		{
-			char start;
-			char end[32];
-			int endSize = 0;
-			fscanf(f, "%c -> ", &start);
+			Rule rule;
+			char buffer[40];
+			fgets(buffer, 40, f);
 
-			char c;
-			do
+			if (buffer[0] < 'A' || buffer[0] > 'Z')
 			{
-				c = fgetc(f);
-				end[endSize++] = c;
-			} while (c != '\n');
-
-			if (start < 'A' || start > 'Z')
-			{
-				LOG_ERROR("Rule #%d is invalid because it uses the invalid variable character %c in the rule start. This rule is being ignored.", i + 1, start);
+				LOG_ERROR("The rule #%d has an invalid variable (%c) and will be ignored.\n", i + 1, buffer[0]);
 				continue;
 			}
 
-			for (int j = 0; j < endSize; ++j)
+			rule.start = buffer[0];
+
+			for (int j = 1; j < 40; ++j)
 			{
-				if ((end[j] < 'A') || (end[j] > 'Z' && end[j] < 'a') || (end[j] > 'z'))
-				{
-					LOG_ERROR("Rule #%d is invalid because it uses the invalid variable character %c in the rule end. This rule is being ignored.", i + 1, end[j]);
-					continue;
-				}
+				if (buffer[j] == ' ' || buffer[j] == '-' || buffer[j] == '>') continue;
+				else if (buffer[j] == '\n') break;
+
+				if ((buffer[j] == '0') || (buffer[j] >= 'a' && buffer[j] <= 'z') || (buffer[j] >= 'A' && buffer[j] <= 'Z'))
+					rule.end.push_back(buffer[j]);
 			}
 
-			Rule rule;
-
-			rule.start = start;
-			for (int i = 0; i < endSize; ++i)
-				rule.end.push_back(end[i]);
-			
 			g.AddRule(rule);
 		}
 
@@ -168,7 +107,7 @@ namespace CFGR
 		std::cout << "Rules = {" << std::endl;
 		for (const Rule r : g.GetRules())
 		{
-			std::cout << "(" << r.start << " -> ";
+			std::cout << "\t(" << r.start << " -> ";
 			for (char e : r.end)
 				std::cout << e;
 			std::cout << ")," << std::endl;
@@ -201,7 +140,7 @@ namespace CFGR
 		fprintf(f, "Rules = {\n");
 		for (const Rule r : g.GetRules())
 		{
-			fprintf(f, "(%c -> ", r.start);
+			fprintf(f, "\t(%c -> ", r.start);
 			for (char e : r.end)
 				fprintf(f, "%c", e);
 			fprintf(f, "),\n");
