@@ -22,6 +22,7 @@ namespace CFGR
 		const std::vector<char> GetVariables() const;
 		const std::vector<char> GetTerminals() const;
 		const std::vector<Rule> GetRules() const;
+		inline char GetSentenceElem() { return sentenceElem; }
 
 	private:
 		char sentenceElem;

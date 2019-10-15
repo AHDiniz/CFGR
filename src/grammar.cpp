@@ -5,6 +5,11 @@
 #include "util/log.hpp"
 #include "util/vector_utils.hpp"
 
+static std::vector<char> NullVariables(CFGR::Grammar g);
+static std::vector<CFGR::Rule> ChainRules(CFGR::Grammar g);
+static std::vector<char> GeneratorVariables(CFGR::Grammar g);
+static std::vector<char> Reachable(CFGR::Grammar g);
+
 namespace CFGR
 {
 	Grammar::Grammar(char sentenceElem, const std::vector<char> variables, const std::vector<char> terminals)
@@ -21,213 +26,87 @@ namespace CFGR
 
 	void Grammar::Refine(void)
 	{
-		std::vector<char> nullable;
-		/* Determining if the null word (0 in this case) belongs to the generated language */ {
-
-			LOG_INFO("%s\n", "Determining if the null word (0 in this case) belongs to the generated language.");
-
-			std::vector<char> previous;
-
-			for (Rule rule : rules)
-				if (CONTAINS(rule.end, '0'))
-					nullable.push_back(rule.start);
-
-			while (previous.size() != nullable.size())
+		std::vector<char> nullable = NullVariables(*this);
+		for (int i = 0; i < rules.size(); ++i)
+		{
+			Rule rule = rules[i];
+			if (rule.end[0] == '0')
 			{
-				for (Rule rule : rules)
-				{
-					for (char i = 'a'; i <= 'z'; ++i)
-						if (CONTAINS(rule.end, i))
-							continue;
-
-					bool canPush = true;
-					for (char n : nullable)
-						if (!CONTAINS(rule.end, n))
-							canPush = false;
-					if (canPush) nullable.push_back(rule.start);
-				}
-
-				previous = nullable;
+				REMOVE(rules, rule);
+				--i;
+			}
+			if (rule.start == sentenceElem)
+			{
+				Rule nRule;
+				nRule.start = '$';
+				nRule.end = rule.end;
+				rules.push_back(nRule);
 			}
 		}
 
-		char prevSElem;
-		/* Removing the sentence element recursion if it's nullable */
 		if (CONTAINS(nullable, sentenceElem))
 		{
-			LOG_INFO("%s\n", "Removing the sentence element recursion.");
-			char nSentenceElem = '$';
+			Rule nRule1;
+			nRule1.start = '$';
+			nRule1.end = { sentenceElem };
 
-			Rule nRule1 = {nSentenceElem, {sentenceElem}};
-			Rule nRule2 = {nSentenceElem, {'0'}};
+			Rule nRule2;
+			nRule2.start = '$';
+			nRule2.end = { '0' };
 
 			rules.push_back(nRule1);
 			rules.push_back(nRule2);
-
-			prevSElem = sentenceElem;
-			sentenceElem = nSentenceElem;
-			variables.push_back(nSentenceElem);
 		}
 
-		/* Removing the null word rules from the grammar while mantaining the resultant language */ {
+		std::vector<Rule> chainRules = ChainRules(*this);
+		for (Rule chainRule : chainRules)
+			REMOVE(rules, chainRule);
 
-			LOG_INFO("%s\n", "Removing the null word rules from the grammar while mantaining the resultant language.");
-
-			std::vector<Rule> nullRules;
+		for (Rule chainRule : chainRules)
+		{
 			for (Rule rule : rules)
 			{
-				if (rule.start != '$' && rule.end[0] == '0')
+				if (rule.start == chainRule.end[0])
 				{
-					nullRules.push_back(rule);
-					REMOVE(rules, rule);
-				}
-			}
-
-			for (Rule rule : rules)
-			{
-				if (rule.start == '$' && rule.end[0] == '0') continue;
-
-				for (Rule nullRule : nullRules)
-				{
-					if (CONTAINS(rule.end, nullRule.start))
-					{
-						Rule nRule;
-						nRule.start = rule.start;
-						for (char v : rule.end)
-							if (v != nullRule.start)
-								nRule.end.push_back(v);
-						rules.push_back(nRule);
-					}
+					Rule nRule;
+					nRule.start = chainRule.start;
+					nRule.end = rule.end;
+					rules.push_back(nRule);
 				}
 			}
 		}
 
-		/* Removing chain rules while mantaining the resultant language */ {
-
-			LOG_INFO("%s\n", "Removing chain rules while mantaining the resultant language.");
-
-			std::vector<Rule> chainRules;
-			for (Rule rule : rules)
+		std::vector<char> generators = GeneratorVariables(*this);
+		for (int i = 0; i < rules.size(); ++i)
+		{
+			Rule rule = rules[i];
+			for (char e : rule.end)
 			{
-				if (rule.start == sentenceElem && rule.end[0] == prevSElem) continue;
-				if (rule.end.size() == 1 && CONTAINS(variables, rule.end[0]))
+				if ((e >= 'A' && e <= 'Z') && !CONTAINS(generators, e))
 				{
-					chainRules.push_back(rule);
 					REMOVE(rules, rule);
+					--i;
+					break;
 				}
-			}
-
-			std::vector<Rule> nRules;
-			for (Rule chainRule : chainRules)
-			{
-				for (Rule rule : rules)
-				{
-					if (rule.start == chainRule.end[0])
-					{
-						Rule nRule;
-						nRule.start = chainRule.start;
-						nRule.end = rule.end;
-						nRules.push_back(nRule);
-					}
-				}
-			}
-
-			for (Rule nRule : nRules)
-				rules.push_back(nRule);
-		}
-
-		/* Removing the variables that don't generate terminal strings */ {
-
-			LOG_INFO("%s\n", "Removing the variables that don't generate terminal strings.");
-
-			std::vector<char> previous;
-			std::vector<char> generators;
-			generators.push_back(sentenceElem);
-
-			while (previous.size() != generators.size())
-			{
-				for (Rule rule : rules)
-				{
-					if (CONTAINS(generators, rule.start))
-					{
-						for (char v : rule.end)
-						{
-							if (v >= 'a' && v <= 'z')
-								generators.push_back(rule.start);
-						}
-					}
-				}
-
-				previous = generators;
-			}
-
-			for (char variable : variables)
-			{
-				if (!CONTAINS(generators, variable))
-					REMOVE(variables, variable);
-			}
-
-			for (Rule rule : rules)
-			{
-				if (!CONTAINS(generators, rule.start))
-					REMOVE(rules, rule);
 			}
 		}
 
-		/* Removing the unreachable variables through the sentence element */ {
-
-			LOG_INFO("%s\n", "Removing the unreachable variables through the sentencial element.");
-
-			std::vector<char> previous;
-			std::vector<char> reachable;
-			reachable.push_back(sentenceElem);
-
-			while (previous.size() != reachable.size())
+		std::vector<char> reachable = Reachable(*this);
+		for (int i = 0; i < rules.size(); ++i)
+		{
+			Rule rule = rules[i];
+			if (!CONTAINS(reachable, rule.start))
 			{
-				for (Rule rule : rules)
-				{
-					if (CONTAINS(reachable, rule.start))
-					{
-						for (char v : rule.end)
-						{
-							if ((v >= 'A' && v <= 'Z') || (v >= 'a' && v <= 'z'))
-								reachable.push_back(v);
-						}
-					}
-				}
-
-				previous = reachable;
+				REMOVE(rules, rule);
+				--i;
+				continue;
 			}
 
-			std::vector<char> notReachVar;
-			for (char variable : variables)
+			for (char e : rule.end)
 			{
-				if (!CONTAINS(reachable, variable))
+				if (!CONTAINS(reachable, e))
 				{
-					notReachVar.push_back(variable);
-					REMOVE(variables, variable);
-				}
-			}
-
-			std::vector<char> notReachTerm;
-			for (char terminal : terminals)
-			{
-				if (!CONTAINS(reachable, terminal))
-				{
-					notReachTerm.push_back(terminal);
-					REMOVE(terminals, terminal);
-				}
-			}
-
-			for (Rule rule : rules)
-			{
-				if (CONTAINS(notReachVar, rule.start))
-					REMOVE(rules, rule);
-
-				for (char e : rule.end)
-				{
-					if (CONTAINS(notReachTerm, e))
-						REMOVE(rules, rule);
+					
 				}
 			}
 		}
@@ -266,4 +145,101 @@ namespace CFGR
 		}
 		return result;
 	}
+}
+
+static std::vector<char> NullVariables(CFGR::Grammar g)
+{
+	std::vector<char> previous;
+	std::vector<char> nullable;
+
+	for (CFGR::Rule rule : g.GetRules())
+	{
+		if (rule.end[0] == '0')
+			nullable.push_back(rule.start);
+	}
+
+	while (previous.size() != nullable.size())
+	{
+		for (CFGR::Rule rule : g.GetRules())
+		{
+			for (char e : rule.end)
+			{
+				if (CONTAINS(nullable, e) && !CONTAINS(nullable, rule.start))
+				{
+					nullable.push_back(rule.start);
+					break;
+				}
+			}
+		}
+
+		previous = nullable;
+	}
+
+	return nullable;
+}
+
+static std::vector<CFGR::Rule> ChainRules(CFGR::Grammar g)
+{
+	std::vector<CFGR::Rule> chainRules;
+
+	for (CFGR::Rule rule : g.GetRules())
+	{
+		if (rule.end.size() == 1 && CONTAINS(g.GetVariables(), rule.end[0]))
+		{
+			chainRules.push_back(rule);
+		}
+	}
+
+	return chainRules;
+}
+
+static std::vector<char> GeneratorVariables(CFGR::Grammar g)
+{
+	std::vector<char> previous;
+	std::vector<char> generators;
+
+	for (CFGR::Rule rule : g.GetRules())
+	{
+		if (rule.end.size() == 1 && CONTAINS(g.GetTerminals, rule.end[0]))
+		{
+			generators.push_back(rule.start);
+		}
+	}
+
+	while (previous.size() != generators.size())
+	{
+		for (CFGR::Rule rule : g.GetRules())
+		{
+			for (char e : rule.end)
+			{
+				if (CONTAINS(generators, e) && !CONTAINS(generators, rule.start))
+				{
+					generators.push_back(rule.start);
+					break;
+				}
+			}
+		}
+
+		previous = generators;
+	}
+
+	return generators;
+}
+
+static std::vector<char> Reachable(CFGR::Grammar g)
+{
+	std::vector<char> reachable;
+	reachable.push_back(g.GetSentenceElem());
+
+	for (CFGR::Rule rule : g.GetRules())
+	{
+		if (CONTAINS(reachable, rule.start))
+		{
+			for (char e : rule.end)
+				if (!CONTAINS(reachable, e))
+					reachable.push_back(e);
+		}
+	}
+
+	return reachable;
 }
