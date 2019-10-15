@@ -106,7 +106,10 @@ namespace CFGR
 			{
 				if (!CONTAINS(reachable, e))
 				{
-					
+					REMOVE(rules, rule);
+					--i;
+					if (CONTAINS(variables, e)) REMOVE(variables, e);
+					else if (CONTAINS(terminals, e)) REMOVE(terminals, e);
 				}
 			}
 		}
@@ -200,7 +203,7 @@ static std::vector<char> GeneratorVariables(CFGR::Grammar g)
 
 	for (CFGR::Rule rule : g.GetRules())
 	{
-		if (rule.end.size() == 1 && CONTAINS(g.GetTerminals, rule.end[0]))
+		if (rule.end.size() == 1 && CONTAINS(g.GetTerminals(), rule.end[0]))
 		{
 			generators.push_back(rule.start);
 		}
