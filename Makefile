@@ -5,9 +5,9 @@ config = debug
 endif
 
 ifeq ($(config), debug)
-CFLAGS = -O3 -w -std=c++17
-else
 CFLAGS = -g -Wall -Wextra -std=c++17
+else
+CFLAGS = -O3 -w -std=c++17
 endif
 
 INC = -Iinclude

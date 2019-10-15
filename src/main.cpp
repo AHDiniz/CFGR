@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-	std::cout << "CFGR - Context Free Grammar Refiner - version 0.0.1" << std::endl << std::endl;
+	std::cout << "CFGR - Context Free Grammar Refiner - version 0.0.1" << std::endl;
 	std::cout << "by Alan Herculano Diniz - MIT License" << std::endl << std::endl;
 
 	if (argc == 1)
@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 		g.Refine();
 		CFGR::Print(g);
 	}
-	else if (argc == 2 && (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "--h") == 0) || strcmp(argv[1], "-h") == 0)
+	else if (argc == 2 && (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "--h") == 0 || strcmp(argv[1], "-h") == 0))
 	{
 		std::cout << "Usage:" << std::endl;
 		std::cout << "Use the -i flag to define the input file: ./CFGR -i input.txt" << std::endl;

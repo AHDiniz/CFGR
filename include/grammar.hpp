@@ -10,7 +10,7 @@ namespace CFGR
 		std::vector<char> end;
 	};
 
-	bool operator==(const Rule r1, const Rule r2);
+	bool operator==(Rule r1, Rule r2);
 
 	class Grammar
 	{

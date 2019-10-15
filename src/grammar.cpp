@@ -199,22 +199,36 @@ namespace CFGR
 				previous = reachable;
 			}
 
+			std::vector<char> notReachVar;
 			for (char variable : variables)
 			{
 				if (!CONTAINS(reachable, variable))
+				{
+					notReachVar.push_back(variable);
 					REMOVE(variables, variable);
+				}
 			}
 
+			std::vector<char> notReachTerm;
 			for (char terminal : terminals)
 			{
 				if (!CONTAINS(reachable, terminal))
+				{
+					notReachTerm.push_back(terminal);
 					REMOVE(terminals, terminal);
+				}
 			}
 
 			for (Rule rule : rules)
 			{
-				if (!CONTAINS(reachable, rule.start))
+				if (CONTAINS(notReachVar, rule.start))
 					REMOVE(rules, rule);
+
+				for (char e : rule.end)
+				{
+					if (CONTAINS(notReachTerm, e))
+						REMOVE(rules, rule);
+				}
 			}
 		}
 	}
@@ -234,13 +248,14 @@ namespace CFGR
 		return rules;
 	}
 
-	bool operator==(const Rule r1, const Rule r2)
+	bool operator==(Rule r1, Rule r2)
 	{
 		bool result = true;
 		if (r1.start != r2.start) result = false;
 		else
 		{
-			for (int i = 0; i < r1.end.size(); ++i)
+			int s = (r1.end.size() < r2.end.size()) ? r1.end.size() : r2.end.size();
+			for (int i = 0; i < s; ++i)
 			{
 				if (r1.end[i] != r2.end[i])
 				{
